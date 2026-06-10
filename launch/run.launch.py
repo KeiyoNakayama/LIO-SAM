@@ -10,6 +10,7 @@ def generate_launch_description():
 
     share_dir = get_package_share_directory('lio_sam')
     parameter_file = LaunchConfiguration('params_file')
+    use_sim_time = LaunchConfiguration('use_sim_time')
     xacro_path = os.path.join(share_dir, 'config', 'robot.urdf.xacro')
     rviz_config_file = os.path.join(share_dir, 'config', 'rviz2.rviz')
 
@@ -19,15 +20,21 @@ def generate_launch_description():
             share_dir, 'config', 'params.yaml'),
         description='FPath to the ROS2 parameters file to use.')
 
+    use_sim_time_declare = DeclareLaunchArgument(
+        'use_sim_time',
+        default_value='true',
+        description='Use simulation / clock time for bag playback or simulation.')
+
     print("urdf_file_name : {}".format(xacro_path))
 
     return LaunchDescription([
         params_declare,
+        use_sim_time_declare,
         Node(
             package='tf2_ros',
             executable='static_transform_publisher',
             arguments='0.0 0.0 0.0 0.0 0.0 0.0 map odom'.split(' '),
-            parameters=[parameter_file],
+            parameters=[parameter_file, {'use_sim_time': use_sim_time}],
             output='screen'
             ),
         Node(
@@ -36,6 +43,7 @@ def generate_launch_description():
             name='robot_state_publisher',
             output='screen',
             parameters=[{
+                'use_sim_time': use_sim_time,
                 'robot_description': Command(['xacro', ' ', xacro_path])
             }]
         ),
@@ -43,28 +51,28 @@ def generate_launch_description():
             package='lio_sam',
             executable='lio_sam_imuPreintegration',
             name='lio_sam_imuPreintegration',
-            parameters=[parameter_file],
+            parameters=[parameter_file, {'use_sim_time': use_sim_time}],
             output='screen'
         ),
         Node(
             package='lio_sam',
             executable='lio_sam_imageProjection',
             name='lio_sam_imageProjection',
-            parameters=[parameter_file],
+            parameters=[parameter_file, {'use_sim_time': use_sim_time}],
             output='screen'
         ),
         Node(
             package='lio_sam',
             executable='lio_sam_featureExtraction',
             name='lio_sam_featureExtraction',
-            parameters=[parameter_file],
+            parameters=[parameter_file, {'use_sim_time': use_sim_time}],
             output='screen'
         ),
         Node(
             package='lio_sam',
             executable='lio_sam_mapOptimization',
             name='lio_sam_mapOptimization',
-            parameters=[parameter_file],
+            parameters=[parameter_file, {'use_sim_time': use_sim_time}],
             output='screen'
         ),
         Node(
@@ -72,6 +80,7 @@ def generate_launch_description():
             executable='rviz2',
             name='rviz2',
             arguments=['-d', rviz_config_file],
+            parameters=[{'use_sim_time': use_sim_time}],
             output='screen'
         )
     ])
